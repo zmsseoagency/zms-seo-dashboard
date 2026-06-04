@@ -1,0 +1,47 @@
+# OS
+.DS_Store
+*.swp
+
+# Editor
+.vscode/
+.idea/
+*.iml
+
+# Env files (NEVER commit these)
+.env
+.env.local
+.env.*.local
+
+# Secrets
+*.pem
+*.key
+*-credentials.json
+service-account-*.json
+
+# Node
+node_modules/
+.next/
+out/
+dist/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Docker
+docker-compose.override.yml
+
+# Supabase
+supabase/.temp/
+supabase/.branches/
