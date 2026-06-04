@@ -1,0 +1,96 @@
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: zms-redis
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: ../apps/api
+      dockerfile: Dockerfile
+    container_name: zms-api
+    restart: unless-stopped
+    env_file:
+      - ../apps/api/.env
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - ../apps/api/app:/app/app
+    depends_on:
+      redis:
+        condition: service_healthy
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+
+  celery-worker:
+    build:
+      context: ../apps/api
+      dockerfile: Dockerfile
+    container_name: zms-celery-worker
+    restart: unless-stopped
+    env_file:
+      - ../apps/api/.env
+    volumes:
+      - ../apps/api/app:/app/app
+    depends_on:
+      redis:
+        condition: service_healthy
+    command: ["celery", "-A", "app.celery_app", "worker", "--loglevel=info", "--concurrency=4"]
+
+  celery-beat:
+    build:
+      context: ../apps/api
+      dockerfile: Dockerfile
+    container_name: zms-celery-beat
+    restart: unless-stopped
+    env_file:
+      - ../apps/api/.env
+    volumes:
+      - ../apps/api/app:/app/app
+    depends_on:
+      redis:
+        condition: service_healthy
+    command: ["celery", "-A", "app.celery_app", "beat", "--loglevel=info"]
+
+  flower:
+    image: mher/flower:latest
+    container_name: zms-flower
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:5555:5555"
+    depends_on:
+      redis:
+        condition: service_healthy
+    command:
+      - "celery"
+      - "--broker=redis://redis:6379/1"
+      - "flower"
+      - "--port=5555"
+      - "--basic_auth=admin:zms2026!"
+
+  web:
+    build:
+      context: ../apps/web
+      dockerfile: Dockerfile
+    container_name: zms-web
+    restart: unless-stopped
+    env_file:
+      - ../apps/web/.env.local
+    ports:
+      - "127.0.0.1:3000:3000"
+    volumes:
+      - ../apps/web:/app
+      - /app/node_modules
+      - /app/.next
+    command: ["npm", "run", "dev"]
+
+volumes:
+  redis-data:
